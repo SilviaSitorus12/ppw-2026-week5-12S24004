@@ -6,31 +6,46 @@ use App\Models\Buku;
 use App\Models\Kategori;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class BukuController extends Controller
 {
     /**
-     * GET /buku - daftar buku (Eager Loading + pagination + pencarian).
+     * GET /buku - katalog buku: eager loading, withCount, filter dinamis, statistik Query Builder.
      */
     public function index(Request $request): View
     {
-        $cari = trim((string) $request->query('cari', ''));
+        $cari       = trim((string) $request->query('cari', ''));
+        $kategoriId = $request->integer('kategori');   // 0 jika tidak dipilih
 
-        $bukus = Buku::with('kategori')                     // Eager Loading: cegah N+1
+        // Eloquent: relasi kategori di-eager load, jumlah peminjaman dihitung lewat subquery (bebas N+1).
+        $bukus = Buku::with('kategori')
+            ->withCount('peminjamans')
             ->when($cari !== '', function ($query) use ($cari) {
                 $query->where(function ($sub) use ($cari) {
-                    $sub->where('judul', 'like', "%{$cari}%")    // parameter binding -> aman dari SQLi
+                    $sub->where('judul', 'like', "%{$cari}%")      // parameter binding -> aman dari SQLi
                         ->orWhere('penulis', 'like', "%{$cari}%")
                         ->orWhere('isbn', 'like', "%{$cari}%");
                 });
             })
+            ->when($kategoriId > 0, fn ($query) => $query->where('kategori_id', $kategoriId))
             ->latest()
             ->paginate(10)
-            ->withQueryString();                            // kata kunci tetap ada saat pindah halaman
+            ->withQueryString();                              // filter tetap terbawa saat pindah halaman
 
-        return view('buku.index', compact('bukus', 'cari'));
+        // Fluent Query Builder (DB::table): agregasi cepat tanpa membuat objek model.
+        $stats = [
+            'total_judul'        => DB::table('bukus')->count(),
+            'total_stok'         => (int) DB::table('bukus')->sum('stok'),
+            'sedang_dipinjam'    => DB::table('peminjamans')->where('status', 'dipinjam')->count(),
+            'total_dikembalikan' => DB::table('peminjamans')->where('status', 'dikembalikan')->count(),
+        ];
+
+        $kategoris = Kategori::orderBy('nama_kategori')->get(['id', 'nama_kategori']);
+
+        return view('buku.index', compact('bukus', 'cari', 'kategoriId', 'kategoris', 'stats'));
     }
 
     /**
