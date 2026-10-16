@@ -75,5 +75,11 @@ class BukuSeeder extends Seeder
                     ->create();
             }
         }
+
+        // Sampel stok khusus untuk menguji transaksi ACID:
+        // stok 0 -> peminjaman harus ditolak (rollback),
+        // stok 1 -> hanya satu peminjam yang boleh lolos (uji lockForUpdate).
+        Buku::where('judul', 'Pengantar Kecerdasan Buatan')->update(['stok' => 0]);
+        Buku::where('judul', 'Kalkulus untuk Mahasiswa Teknik')->update(['stok' => 1]);
     }
 }

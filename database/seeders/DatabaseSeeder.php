@@ -7,13 +7,15 @@ use Illuminate\Database\Seeder;
 class DatabaseSeeder extends Seeder
 {
     /**
-     * Urutan penting: kategori harus ada sebelum buku (foreign key).
+     * Urutan penting: kategori sebelum buku, buku sebelum peminjaman (foreign key).
      */
     public function run(): void
     {
         $this->call([
+            UserSeeder::class,
             KategoriSeeder::class,
             BukuSeeder::class,
+            PeminjamanSeeder::class,
         ]);
     }
 }
