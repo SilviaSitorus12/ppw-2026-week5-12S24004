@@ -26,6 +26,7 @@
         .btn-del:hover, .btn-del:focus { background-color: var(--del-purple-dark); color: #fff; border-color: var(--del-purple-dark); }
         .btn-outline-del { color: var(--del-purple); border-color: var(--del-purple); }
         .btn-outline-del:hover { background-color: var(--del-purple); color: #fff; }
+        .bg-del { background-color: var(--del-purple) !important; color: #fff !important; }
         .badge-del { background-color: var(--del-purple-soft); color: var(--del-purple); font-weight: 600; }
         .link-del { color: var(--del-purple); }
         .link-del:hover { color: var(--del-purple-dark); }
@@ -53,6 +54,9 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('kategori.*') ? 'active' : '' }}" href="{{ route('kategori.index') }}">Kategori</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('peminjaman.*') ? 'active' : '' }}" href="{{ route('peminjaman.index') }}">Peminjaman</a>
                     </li>
                 </ul>
             </div>

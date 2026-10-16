@@ -11,6 +11,9 @@ use Illuminate\View\View;
 
 class BukuController extends Controller
 {
+    /**
+     * GET /buku - daftar buku (Eager Loading + pagination + pencarian).
+     */
     public function index(Request $request): View
     {
         $cari = trim((string) $request->query('cari', ''));
@@ -18,18 +21,21 @@ class BukuController extends Controller
         $bukus = Buku::with('kategori')                     // Eager Loading: cegah N+1
             ->when($cari !== '', function ($query) use ($cari) {
                 $query->where(function ($sub) use ($cari) {
-                    $sub->where('judul', 'like', "%{$cari}%")
+                    $sub->where('judul', 'like', "%{$cari}%")    // parameter binding -> aman dari SQLi
                         ->orWhere('penulis', 'like', "%{$cari}%")
                         ->orWhere('isbn', 'like', "%{$cari}%");
                 });
             })
             ->latest()
             ->paginate(10)
-            ->withQueryString();
+            ->withQueryString();                            // kata kunci tetap ada saat pindah halaman
 
         return view('buku.index', compact('bukus', 'cari'));
     }
 
+    /**
+     * GET /buku/create - form tambah buku.
+     */
     public function create(): View
     {
         $kategoris = Kategori::orderBy('nama_kategori')->get(['id', 'nama_kategori']);
@@ -37,6 +43,9 @@ class BukuController extends Controller
         return view('buku.create', compact('kategoris'));
     }
 
+    /**
+     * POST /buku - simpan buku baru.
+     */
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate($this->rules(), $this->messages(), $this->attributes());
@@ -47,13 +56,23 @@ class BukuController extends Controller
             ->with('success', "Buku \"{$validated['judul']}\" berhasil ditambahkan.");
     }
 
+    /**
+     * GET /buku/{buku} - detail buku (Implicit Route Model Binding).
+     */
     public function show(Buku $buku): View
     {
-        $buku->load('kategori');
+        // Eager load kategori + 5 riwayat peminjaman terbaru buku ini.
+        $buku->load([
+            'kategori',
+            'peminjamans' => fn ($q) => $q->latest()->limit(5),
+        ]);
 
         return view('buku.show', compact('buku'));
     }
 
+    /**
+     * GET /buku/{buku}/edit - form ubah buku.
+     */
     public function edit(Buku $buku): View
     {
         $kategoris = Kategori::orderBy('nama_kategori')->get(['id', 'nama_kategori']);
@@ -61,6 +80,9 @@ class BukuController extends Controller
         return view('buku.edit', compact('buku', 'kategoris'));
     }
 
+    /**
+     * PUT/PATCH /buku/{buku} - perbarui data buku.
+     */
     public function update(Request $request, Buku $buku): RedirectResponse
     {
         $validated = $request->validate($this->rules($buku), $this->messages(), $this->attributes());
@@ -71,6 +93,9 @@ class BukuController extends Controller
             ->with('success', 'Perubahan data buku berhasil disimpan.');
     }
 
+    /**
+     * DELETE /buku/{buku} - hapus buku.
+     */
     public function destroy(Buku $buku): RedirectResponse
     {
         $judul = $buku->judul;
@@ -80,6 +105,10 @@ class BukuController extends Controller
             ->with('success', "Buku \"{$judul}\" berhasil dihapus.");
     }
 
+    /**
+     * Aturan validasi server-side. Saat update, ISBN milik buku itu sendiri
+     * diabaikan dari pengecekan unique.
+     */
     private function rules(?Buku $buku = null): array
     {
         return [
@@ -102,8 +131,14 @@ class BukuController extends Controller
             'unique'   => ':attribute sudah terdaftar pada buku lain.',
             'integer'  => ':attribute harus berupa bilangan bulat.',
             'exists'   => ':attribute yang dipilih tidak ditemukan.',
-            'min'      => ['string' => ':attribute minimal :min karakter.', 'numeric' => ':attribute minimal :min.'],
-            'max'      => ['string' => ':attribute maksimal :max karakter.', 'numeric' => ':attribute maksimal :max.'],
+            'min'      => [
+                'string'  => ':attribute minimal :min karakter.',
+                'numeric' => ':attribute minimal :min.',
+            ],
+            'max'      => [
+                'string'  => ':attribute maksimal :max karakter.',
+                'numeric' => ':attribute maksimal :max.',
+            ],
         ];
     }
 
