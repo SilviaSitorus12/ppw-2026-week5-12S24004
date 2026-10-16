@@ -4,7 +4,9 @@
             <h1 class="h3 mb-0">Kategori Buku</h1>
             <p class="text-muted mb-0">{{ $kategoris->total() }} kategori</p>
         </div>
-        <a href="{{ route('kategori.create') }}" class="btn btn-del">Tambah kategori</a>
+        @auth
+            <a href="{{ route('kategori.create') }}" class="btn btn-del">Tambah kategori</a>
+        @endauth
     </div>
 
     <div class="card border-0 shadow-sm">
@@ -16,7 +18,9 @@
                         <th scope="col">Kode</th>
                         <th scope="col">Nama kategori</th>
                         <th scope="col" class="text-center">Jumlah buku</th>
-                        <th scope="col" class="text-end">Aksi</th>
+                        @auth
+                            <th scope="col" class="text-end">Aksi</th>
+                        @endauth
                     </tr>
                 </thead>
                 <tbody>
@@ -30,6 +34,7 @@
                                 </a>
                             </td>
                             <td class="text-center">{{ $kategori->bukus_count }}</td>
+                            @auth
                             <td class="text-end text-nowrap">
                                 <a href="{{ route('kategori.edit', $kategori) }}" class="btn btn-sm btn-outline-secondary">Ubah</a>
                                 <form action="{{ route('kategori.destroy', $kategori) }}" method="POST" class="d-inline"
@@ -39,11 +44,12 @@
                                     <button type="submit" class="btn btn-sm btn-outline-danger">Hapus</button>
                                 </form>
                             </td>
+                            @endauth
                         </tr>
                     @empty
                         <tr>
                             <td colspan="5" class="text-center text-muted py-5">
-                                Belum ada kategori. <a href="{{ route('kategori.create') }}" class="link-del">Tambahkan kategori pertama</a>.
+                                Belum ada kategori.
                             </td>
                         </tr>
                     @endforelse

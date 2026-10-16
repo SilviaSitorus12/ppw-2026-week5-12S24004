@@ -12,7 +12,9 @@
             <h1 class="h3 mb-0">{{ $kategori->nama_kategori }}</h1>
             <p class="text-muted mb-0">{{ $bukus->total() }} buku dalam kategori ini</p>
         </div>
-        <a href="{{ route('kategori.edit', $kategori) }}" class="btn btn-outline-del">Ubah kategori</a>
+        @auth
+            <a href="{{ route('kategori.edit', $kategori) }}" class="btn btn-outline-del">Ubah kategori</a>
+        @endauth
     </div>
 
     <div class="card border-0 shadow-sm">
@@ -32,7 +34,6 @@
             @empty
                 <div class="list-group-item text-center text-muted py-5">
                     Belum ada buku di kategori ini.
-                    <a href="{{ route('buku.create') }}" class="link-del">Tambahkan buku</a>.
                 </div>
             @endforelse
         </div>

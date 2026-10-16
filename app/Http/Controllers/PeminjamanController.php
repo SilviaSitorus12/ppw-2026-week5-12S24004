@@ -96,6 +96,12 @@ class PeminjamanController extends Controller
                 ]);
             }, 3); // dicoba ulang hingga 3 kali bila terjadi deadlock
 
+            // State sesi: ingat peminjam terakhir untuk mengisi otomatis form berikutnya.
+            session(['peminjam_terakhir' => [
+                'nim'  => $peminjaman->nim_peminjam,
+                'nama' => $peminjaman->nama_peminjam,
+            ]]);
+
             return redirect()->route('peminjaman.index')
                 ->with('success', "Peminjaman {$peminjaman->kode_pinjam} berhasil dicatat. Stok buku berkurang 1.");
         } catch (ModelNotFoundException $e) {

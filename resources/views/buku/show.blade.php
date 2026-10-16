@@ -16,6 +16,7 @@
                     <h1 class="h3 mb-1">{{ $buku->judul }}</h1>
                     <p class="text-muted mb-0">oleh {{ $buku->penulis }}</p>
                 </div>
+                @auth
                 <div class="d-flex gap-2">
                     <a href="{{ route('buku.edit', $buku) }}" class="btn btn-outline-del">Ubah</a>
                     <form action="{{ route('buku.destroy', $buku) }}" method="POST"
@@ -25,6 +26,7 @@
                         <button type="submit" class="btn btn-outline-danger">Hapus</button>
                     </form>
                 </div>
+                @endauth
             </div>
 
             <dl class="row mb-4">
@@ -53,6 +55,7 @@
         </div>
     </div>
 
+    @auth
     <div class="row g-4 mt-1">
         {{-- Form peminjaman: diproses PeminjamanController@pinjam dalam DB::transaction --}}
         <div class="col-lg-5">
@@ -74,14 +77,14 @@
 
                         <div class="mb-3">
                             <label for="nim_peminjam" class="form-label">NIM peminjam</label>
-                            <input type="text" id="nim_peminjam" name="nim_peminjam" value="{{ old('nim_peminjam') }}"
+                            <input type="text" id="nim_peminjam" name="nim_peminjam" value="{{ old('nim_peminjam', session('peminjam_terakhir.nim')) }}"
                                    class="form-control text-uppercase @error('nim_peminjam') is-invalid @enderror">
                             @error('nim_peminjam') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
                         <div class="mb-3">
                             <label for="nama_peminjam" class="form-label">Nama peminjam</label>
-                            <input type="text" id="nama_peminjam" name="nama_peminjam" value="{{ old('nama_peminjam') }}"
+                            <input type="text" id="nama_peminjam" name="nama_peminjam" value="{{ old('nama_peminjam', session('peminjam_terakhir.nama')) }}"
                                    class="form-control @error('nama_peminjam') is-invalid @enderror">
                             @error('nama_peminjam') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
@@ -94,6 +97,9 @@
                             @error('durasi_hari') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
+                        @if (session('peminjam_terakhir'))
+                            <div class="form-text mb-2">NIM dan nama terisi dari peminjam terakhir (disimpan di session).</div>
+                        @endif
                         <button type="submit" class="btn btn-del w-100">Pinjam buku</button>
                     </form>
                 </div>
@@ -132,4 +138,10 @@
             </div>
         </div>
     </div>
+    @else
+        <div class="alert alert-light border mt-4 mb-0">
+            Peminjaman dicatat oleh pustakawan.
+            <a href="{{ route('login') }}" class="link-del">Login sebagai pustakawan</a> untuk mencatat peminjaman buku ini.
+        </div>
+    @endauth
 </x-layout>

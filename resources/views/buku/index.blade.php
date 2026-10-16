@@ -4,7 +4,9 @@
             <h1 class="h3 mb-0">Katalog Buku</h1>
             <p class="text-muted mb-0">{{ $bukus->total() }} judul sesuai filter</p>
         </div>
-        <a href="{{ route('buku.create') }}" class="btn btn-del">Tambah buku</a>
+        @auth
+            <a href="{{ route('buku.create') }}" class="btn btn-del">Tambah buku</a>
+        @endauth
     </div>
 
     {{-- Kartu statistik: dihitung dengan Fluent Query Builder DB::table() --}}
@@ -80,7 +82,9 @@
                         <th scope="col" class="text-center">Tahun</th>
                         <th scope="col" class="text-center">Stok</th>
                         <th scope="col" class="text-center">Dipinjam</th>
-                        <th scope="col" class="text-end">Aksi</th>
+                        @auth
+                            <th scope="col" class="text-end">Aksi</th>
+                        @endauth
                     </tr>
                 </thead>
                 <tbody>
@@ -105,15 +109,17 @@
                             </td>
                             {{-- peminjamans_count berasal dari withCount('peminjamans') --}}
                             <td class="text-center">{{ $buku->peminjamans_count }}x</td>
-                            <td class="text-end text-nowrap">
-                                <a href="{{ route('buku.edit', $buku) }}" class="btn btn-sm btn-outline-secondary">Ubah</a>
-                                <form action="{{ route('buku.destroy', $buku) }}" method="POST" class="d-inline"
-                                      onsubmit="return confirm('Yakin ingin menghapus buku ini?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">Hapus</button>
-                                </form>
-                            </td>
+                            @auth
+                                <td class="text-end text-nowrap">
+                                    <a href="{{ route('buku.edit', $buku) }}" class="btn btn-sm btn-outline-secondary">Ubah</a>
+                                    <form action="{{ route('buku.destroy', $buku) }}" method="POST" class="d-inline"
+                                          onsubmit="return confirm('Yakin ingin menghapus buku ini?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Hapus</button>
+                                    </form>
+                                </td>
+                            @endauth
                         </tr>
                     @empty
                         <tr>
@@ -121,7 +127,7 @@
                                 @if ($cari !== '' || $kategoriId > 0)
                                     Tidak ada buku yang cocok dengan filter ini. Coba kata kunci atau kategori lain.
                                 @else
-                                    Belum ada buku. <a href="{{ route('buku.create') }}" class="link-del">Tambahkan buku pertama</a>.
+                                    Belum ada buku.
                                 @endif
                             </td>
                         </tr>
