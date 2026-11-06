@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BukuController;
 use App\Http\Controllers\KategoriController;
 use App\Http\Controllers\PeminjamanController;
+use App\Http\Controllers\Soap\LibrarySoapController; 
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('buku.index'));
@@ -29,3 +30,8 @@ Route::middleware('auth')->group(function () {
 // Publik: katalog hanya-baca (didaftarkan setelah rute "create" agar tidak bentrok)
 Route::resource('buku', BukuController::class)->only(['index', 'show']);
 Route::resource('kategori', KategoriController::class)->only(['index', 'show']);
+
+//  ===== SOAP Legacy: Cek Bebas Pustaka (Sistem Yudisium) =====
+// Sengaja di luar grup 'guest' & 'auth': pemanggilnya mesin, bukan pustakawan yang login.
+Route::get('/soap/sipus.wsdl', [LibrarySoapController::class, 'wsdl'])->name('soap.sipus.wsdl');
+Route::post('/soap/sipus', [LibrarySoapController::class, 'handle'])->name('soap.sipus');

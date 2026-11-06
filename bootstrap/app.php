@@ -11,7 +11,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // [BARU W9] Pemanggil SOAP adalah mesin (Sistem Yudisium), bukan form Blade,
+        // jadi tidak punya token @csrf. Form Blade Minggu 6 tetap dilindungi CSRF.
+        $middleware->validateCsrfTokens(except: [
+            'soap/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

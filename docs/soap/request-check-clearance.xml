@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+               xmlns:m="http://sipus.del.ac.id/soap/sipus">
+    <soap:Body>
+        <m:CheckClearanceStatusRequest>
+            <m:nim_peminjam>12S24004</m:nim_peminjam>
+        </m:CheckClearanceStatusRequest>
+    </soap:Body>
+</soap:Envelope>

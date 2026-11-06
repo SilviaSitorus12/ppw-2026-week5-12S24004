@@ -1,3 +1,51 @@
+# SIPUS-Del — Tahap 3 (Minggu 9): Web Services SOAP & REST API
+
+## Analisis Kebutuhan & Kelayakan Web Services
+
+### Kebutuhan Integrasi
+| Kebutuhan | Pihak Lain | Gaya Layanan | Peran SIPUS-Del |
+|---|---|---|---|
+| Cek bebas pustaka saat yudisium | Aplikasi Administrasi Yudisium (legacy, SOAP) | SOAP 1.1 + WSDL | **Provider** |
+| Katalog & sirkulasi untuk aplikasi mobile/kiosk | Aplikasi Mobile & Kiosk Perpustakaan | REST JSON `/api/v1` | **Provider** |
+| Pengayaan metadata buku (penerbit, halaman) | OpenLibrary REST API | REST JSON | **Consumer** |
+
+SIPUS-Del menjadi **Provider** untuk data yang menjadi domain sahnya (buku, stok, peminjaman).
+SIPUS-Del menjadi **Consumer** untuk metadata bibliografis global yang dikelola pihak lain,
+karena membangun basis data metadata ISBN sendiri tidak layak dari sisi biaya maupun akurasi.
+
+### Kelayakan
+- **Teknis:** Laravel 11 sudah menyediakan `routes/api.php`, Sanctum, API Resource, dan Http Client.
+  SOAP disimulasikan tanpa ext-soap memakai SimpleXML, sehingga tidak ada dependensi server tambahan.
+- **Operasional:** Web Blade tetap melayani pustakawan, sedangkan API melayani mesin.
+  Logika bisnis (stok, ACID) sama, dan hanya lapisan representasinya yang berbeda.
+- **Keamanan:** API stateless dengan Bearer Token (tanpa session/CSRF). SOAP dibatasi pada operasi
+  baca (read-only) dan hanya mengembalikan jumlah pinjaman, bukan data pribadi.
+
+### Mengapa REST (bukan SOAP) untuk Mobile/Kiosk
+| Aspek | SOAP | REST (dipilih) |
+|---|---|---|
+| Ukuran payload | XML verbose (ratusan byte hanya untuk 1 NIM) | JSON ringkas, hemat kuota seluler |
+| Semantik HTTP | Hanya POST sebagai terowongan | GET/POST/PUT/PATCH/DELETE + status code jujur |
+| Caching | Sulit (semua POST) | GET dapat di-cache (Cache-Control/ETag) |
+| Dukungan klien | Butuh library SOAP/stub WSDL | Native di Kotlin/Swift/Flutter/JS |
+| Skalabilitas | Bisa stateful | Wajib stateless, mudah di-load-balance (banyak kiosk) |
+
+SOAP tetap dipakai **hanya** untuk Sistem Yudisium karena sistem tersebut legacy dan
+sudah terikat kontrak WSDL. Menyesuaikan diri dengan sistem tersebut lebih murah
+daripada memaksa sistem itu dimigrasikan.
+
+### Bukti Uji SOAP (cURL)
+| Skenario | NIM | HTTP | Hasil |
+|---|---|---|---|
+| WSDL | – | 200 | Kontrak `CheckClearanceStatus` tampil |
+| Masih meminjam | 12S24004 | 200 | `active_loans` = 2, `is_cleared` = false |
+| Tanpa pinjaman | 99S99999 | 200 | `active_loans` = 0, `is_cleared` = true |
+| Body kosong | – | 500 | `soap:Fault` (soap:Client) |
+| XML cacat | – | 500 | `soap:Fault` Malformed XML |
+| NIM kosong | (kosong) | 500 | `soap:Fault` (soap:Client) |
+
+---
+
 # SIPUS-Del Tahap 2: Transaksi ACID, Query Builder, Session, dan Autentikasi
 
 Tugas Mandiri Praktikum Minggu 6, Pemrograman & Pengujian Web (12S3101), Institut Teknologi Del.
