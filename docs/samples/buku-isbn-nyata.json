@@ -1,0 +1,10 @@
+{
+    "isbn": "9780132350884",
+    "judul": "Clean Code",
+    "penulis": "Robert C. Martin",
+    "penerbit": "Prentice Hall",
+    "tahun_terbit": 2008,
+    "kategori_id": 1,
+    "stok": 2,
+    "sinopsis": "Panduan menulis kode yang bersih, mudah dibaca, dan mudah dirawat."
+}

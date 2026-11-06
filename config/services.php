@@ -35,4 +35,16 @@ return [
         ],
     ],
 
+    // Layanan eksternal OpenLibrary (REST Consumer - Minggu 9)
+    'openlibrary' => [
+        'base_url'   => env('OPENLIBRARY_BASE_URL', 'https://openlibrary.org'),
+        'covers_url' => env('OPENLIBRARY_COVERS_URL', 'https://covers.openlibrary.org'),
+        'timeout'    => (int) env('OPENLIBRARY_TIMEOUT', 8),
+        'contact'    => env('OPENLIBRARY_CONTACT', 'pustakawan@del.ac.id'),
+    ],
+
+    // Opsional: token GitHub untuk latihan Lab 2 (JANGAN di-commit nilainya)
+    'github' => [
+        'token' => env('GITHUB_TOKEN'),
+    ],
 ];

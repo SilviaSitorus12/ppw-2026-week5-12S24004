@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\ApiRootController;
 use App\Http\Controllers\Api\V1\AuthTokenController;
 use App\Http\Controllers\Api\V1\BukuApiController;
+use App\Http\Controllers\Api\V1\BukuReferensiEksternalController;
 use App\Http\Controllers\Api\V1\KategoriApiController;
 use App\Http\Controllers\Api\V1\PeminjamanApiController;
 use Illuminate\Support\Facades\Route;
@@ -20,7 +21,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     // =====================================================================
     Route::get('/', ApiRootController::class)->name('root');
 
-    // Login dibatasi 5 percobaan/menit per IP (mencegah brute force -> 429)
+    // Login dibatasi 5 percobaan per menit per IP (mencegah brute force)
     Route::post('/auth/login', [AuthTokenController::class, 'login'])
         ->middleware('throttle:5,1')
         ->name('auth.login');
@@ -31,6 +32,12 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
     Route::get('/bukus', [BukuApiController::class, 'index'])->name('bukus.index');
     Route::get('/bukus/{id}', [BukuApiController::class, 'show'])->whereNumber('id')->name('bukus.show');
+
+    // REST Consumer: metadata eksternal dari OpenLibrary (dibatasi 30 per menit)
+    Route::get('/bukus/{id}/referensi-eksternal', [BukuReferensiEksternalController::class, 'show'])
+        ->whereNumber('id')
+        ->middleware('throttle:30,1')
+        ->name('bukus.referensi-eksternal');
 
     // =====================================================================
     // 2. ENDPOINT TERPROTEKSI BEARER TOKEN

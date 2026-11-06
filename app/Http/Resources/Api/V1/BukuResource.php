@@ -24,6 +24,7 @@ class BukuResource extends JsonResource
             'update_full'    => ['href' => $selfUrl, 'method' => 'PUT'],
             'update_partial' => ['href' => $selfUrl, 'method' => 'PATCH'],
             'delete'         => ['href' => $selfUrl, 'method' => 'DELETE'],
+                        'referensi_eksternal' => ['href' => url("/api/v1/bukus/{$this->id}/referensi-eksternal"), 'method' => 'GET'],
         ];
 
         if ($tersedia) {
