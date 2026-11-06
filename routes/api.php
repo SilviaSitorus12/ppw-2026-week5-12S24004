@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Api\V1\ApiRootController;
 use App\Http\Controllers\Api\V1\AuthTokenController;
+use App\Http\Controllers\Api\V1\BukuApiController;
+use App\Http\Controllers\Api\V1\KategoriApiController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -22,11 +24,24 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         ->middleware('throttle:5,1')
         ->name('auth.login');
 
+    // Katalog baca-saja
+    Route::get('/kategoris', [KategoriApiController::class, 'index'])->name('kategoris.index');
+    Route::get('/kategoris/{id}', [KategoriApiController::class, 'show'])->whereNumber('id')->name('kategoris.show');
+
+    Route::get('/bukus', [BukuApiController::class, 'index'])->name('bukus.index');
+    Route::get('/bukus/{id}', [BukuApiController::class, 'show'])->whereNumber('id')->name('bukus.show');
+
     // =====================================================================
     // 2. ENDPOINT TERPROTEKSI BEARER TOKEN
     // =====================================================================
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/auth/me', [AuthTokenController::class, 'me'])->name('auth.me');
         Route::post('/auth/logout', [AuthTokenController::class, 'logout'])->name('auth.logout');
+
+        // Mutasi katalog buku
+        Route::post('/bukus', [BukuApiController::class, 'store'])->name('bukus.store');
+        Route::put('/bukus/{id}', [BukuApiController::class, 'update'])->whereNumber('id')->name('bukus.update');
+        Route::patch('/bukus/{id}', [BukuApiController::class, 'partialUpdate'])->whereNumber('id')->name('bukus.partial-update');
+        Route::delete('/bukus/{id}', [BukuApiController::class, 'destroy'])->whereNumber('id')->name('bukus.destroy');
     });
 });

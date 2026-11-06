@@ -1,0 +1,10 @@
+{
+    "isbn": "978-602-1234-567",
+    "judul": "Arsitektur Berorientasi Layanan",
+    "penulis": "Silvia Sitorus",
+    "penerbit": "Informatika Bandung",
+    "tahun_terbit": 2025,
+    "kategori_id": 2,
+    "stok": 3,
+    "sinopsis": "Membahas SOAP, REST, dan microservices untuk sistem informasi kampus."
+}
