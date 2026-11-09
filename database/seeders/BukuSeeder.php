@@ -81,5 +81,22 @@ class BukuSeeder extends Seeder
         // stok 1 -> hanya satu peminjam yang boleh lolos (uji lockForUpdate).
         Buku::where('judul', 'Pengantar Kecerdasan Buatan')->update(['stok' => 0]);
         Buku::where('judul', 'Kalkulus untuk Mahasiswa Teknik')->update(['stok' => 1]);
+
+                // Buku dengan ISBN asli agar endpoint referensi eksternal OpenLibrary
+        // (GET /api/v1/bukus/{id}/referensi-eksternal) dapat diuji dengan hasil 200 OK.
+        if ($kom = $kategoris->get('KOM')) {
+            Buku::updateOrCreate(
+                ['isbn' => '9780132350884'],
+                [
+                    'judul'        => 'Clean Code',
+                    'penulis'      => 'Robert C. Martin',
+                    'penerbit'     => 'Prentice Hall',
+                    'tahun_terbit' => 2008,
+                    'kategori_id'  => $kom->id,
+                    'stok'         => 2,
+                    'sinopsis'     => 'Panduan menulis kode yang bersih, mudah dibaca, dan mudah dirawat.',
+                ]
+            );
+        }
     }
 }

@@ -1,0 +1,2219 @@
+{
+  "info": {
+    "_postman_id": "abbe08ee-e24a-4fe2-9d4c-89474e15cfd9",
+    "name": "SIPUS-Del API v1",
+    "description": "Koleksi pengujian SIPUS-Del Minggu 9 (SOAP + REST API v1).\n\n**Cara pakai**\n1. Jalankan `php artisan migrate:fresh --seed` lalu `php artisan serve`.\n2. Jalankan folder secara berurutan (00 → 07), atau gunakan **Run collection**.\n3. Token, ID buku baru, dan ID peminjaman tersimpan otomatis ke variabel collection.\n\nAkun uji: `pustakawan@del.ac.id` / `password123`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "00. SOAP Legacy (Bebas Pustaka)",
+      "item": [
+        {
+          "name": "WSDL CheckClearanceStatus",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/soap/sipus.wsdl",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "soap",
+                "sipus.wsdl"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Kontrak WSDL berisi operasi CheckClearanceStatus\", () => pm.expect(pm.response.text()).to.include(\"CheckClearanceStatus\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "SOAP Envelope - sukses (200)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/soap/sipus",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "soap",
+                "sipus"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\"\n               xmlns:m=\"http://sipus.del.ac.id/soap/sipus\">\n    <soap:Body>\n        <m:CheckClearanceStatusRequest>\n            <m:nim_peminjam>{{nim_soap}}</m:nim_peminjam>\n        </m:CheckClearanceStatusRequest>\n    </soap:Body>\n</soap:Envelope>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Respons berisi active_loans & is_cleared\", () => {",
+                  "    const t = pm.response.text();",
+                  "    pm.expect(t).to.include(\"active_loans\");",
+                  "    pm.expect(t).to.include(\"is_cleared\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "SOAP Fault - nim kosong (500)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/soap/sipus",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "soap",
+                "sipus"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\"\n               xmlns:m=\"http://sipus.del.ac.id/soap/sipus\">\n    <soap:Body>\n        <m:CheckClearanceStatusRequest>\n            <m:nim_peminjam></m:nim_peminjam>\n        </m:CheckClearanceStatusRequest>\n    </soap:Body>\n</soap:Envelope>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 500\", () => pm.response.to.have.status(500));",
+                  "pm.test(\"Respons berupa <soap:Fault> soap:Client\", () => {",
+                  "    const t = pm.response.text();",
+                  "    pm.expect(t).to.include(\"soap:Fault\");",
+                  "    pm.expect(t).to.include(\"soap:Client\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Layanan SOAP untuk Sistem Yudisium (legacy). Ubah variabel `nim_soap` untuk NIM lain."
+    },
+    {
+      "name": "01. Auth (Sanctum Bearer Token)",
+      "item": [
+        {
+          "name": "Root API v1",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}",
+              "host": [
+                "{{base_url}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Ada _links\", () => pm.expect(pm.response.json().data).to.have.property(\"_links\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - password salah (401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"pustakawan@del.ac.id\",\n    \"password\": \"passwordSALAH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Format RFC 7807 (application/problem+json)\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const j = pm.response.json();",
+                  "    [\"type\", \"title\", \"status\", \"detail\", \"instance\"].forEach(k => pm.expect(j).to.have.property(k));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - body kosong (422)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Format RFC 7807 (application/problem+json)\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const j = pm.response.json();",
+                  "    [\"type\", \"title\", \"status\", \"detail\", \"instance\"].forEach(k => pm.expect(j).to.have.property(k));",
+                  "});",
+                  "pm.test(\"Ada errors per kolom\", () => pm.expect(pm.response.json().errors).to.have.property(\"email\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - sukses (200) & simpan token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"pustakawan@del.ac.id\",\n    \"password\": \"password123\",\n    \"device_name\": \"postman-client\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    pm.test(\"access_token diterbitkan\", () => pm.expect(json.data.access_token).to.be.a(\"string\"));",
+                  "    // Simpan token otomatis ke variabel {{token}} untuk request berikutnya",
+                  "    pm.collectionVariables.set(\"token\", json.data.access_token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Me - tanpa token (401)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Format RFC 7807 (application/problem+json)\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const j = pm.response.json();",
+                  "    [\"type\", \"title\", \"status\", \"detail\", \"instance\"].forEach(k => pm.expect(j).to.have.property(k));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Me - dengan token (200)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Email pustakawan\", () => pm.expect(pm.response.json().data.user.email).to.eql(\"pustakawan@del.ac.id\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Jalankan **Login - sukses** terlebih dahulu: token tersimpan otomatis ke variabel `{{token}}`."
+    },
+    {
+      "name": "02. Katalog (Publik)",
+      "item": [
+        {
+          "name": "Daftar kategori (200)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/kategoris",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "kategoris"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Katalog terpaginasi (200)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bukus?per_page=3",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bukus"
+              ],
+              "query": [
+                {
+                  "key": "per_page",
+                  "value": "3"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test(\"Tepat 3 item\", () => pm.expect(json.data.length).to.eql(3));",
+                  "pm.test(\"Blok meta paginasi lengkap\", () => [\"current_page\", \"per_page\", \"total_items\", \"total_pages\", \"links\"].forEach(k => pm.expect(json.meta).to.have.property(k)));",
+                  "pm.test(\"Setiap buku punya _links HATEOAS\", () => json.data.forEach(b => pm.expect(b).to.have.property(\"_links\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cari + filter + urut (200)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bukus?search=data&tersedia=1&sort=stok&dir=desc&per_page=5",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bukus"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "data"
+                },
+                {
+                  "key": "tersedia",
+                  "value": "1"
+                },
+                {
+                  "key": "sort",
+                  "value": "stok"
+                },
+                {
+                  "key": "dir",
+                  "value": "desc"
+                },
+                {
+                  "key": "per_page",
+                  "value": "5"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json().data;",
+                  "pm.test(\"Semua buku tersedia (stok > 0)\", () => data.forEach(b => pm.expect(b.stok).to.be.above(0)));",
+                  "pm.test(\"Urut stok menurun\", () => { for (let i = 1; i < data.length; i++) pm.expect(data[i - 1].stok).to.be.at.least(data[i].stok); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detail buku stok habis - tanpa pinjam_buku (200)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bukus/{{buku_habis_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bukus",
+                "{{buku_habis_id}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json().data;",
+                  "pm.test(\"Stok 0 / HABIS\", () => pm.expect(b.status_label).to.eql(\"HABIS\"));",
+                  "pm.test(\"HATEOAS: pinjam_buku TIDAK muncul\", () => pm.expect(b._links).to.not.have.property(\"pinjam_buku\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detail buku tidak ada (404)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bukus/999999",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bukus",
+                "999999"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Format RFC 7807 (application/problem+json)\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const j = pm.response.json();",
+                  "    [\"type\", \"title\", \"status\", \"detail\", \"instance\"].forEach(k => pm.expect(j).to.have.property(k));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03. Buku CRUD (Token)",
+      "item": [
+        {
+          "name": "POST buku - tanpa token (401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bukus",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bukus"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"isbn\": \"{{isbn_baru}}\",\n    \"judul\": \"Arsitektur Berorientasi Layanan\",\n    \"penulis\": \"Silvia Sitorus\",\n    \"penerbit\": \"Informatika Bandung\",\n    \"tahun_terbit\": 2025,\n    \"kategori_id\": 2,\n    \"stok\": 3,\n    \"sinopsis\": \"Membahas SOAP, REST, dan microservices untuk sistem informasi kampus.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Format RFC 7807 (application/problem+json)\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const j = pm.response.json();",
+                  "    [\"type\", \"title\", \"status\", \"detail\", \"instance\"].forEach(k => pm.expect(j).to.have.property(k));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST buku - body kosong (422)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bukus",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bukus"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Format RFC 7807 (application/problem+json)\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const j = pm.response.json();",
+                  "    [\"type\", \"title\", \"status\", \"detail\", \"instance\"].forEach(k => pm.expect(j).to.have.property(k));",
+                  "});",
+                  "pm.test(\"errors berisi isbn & judul\", () => { const e = pm.response.json().errors; pm.expect(e).to.have.property(\"isbn\"); pm.expect(e).to.have.property(\"judul\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST buku - sukses (201 + Location)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bukus",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bukus"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"isbn\": \"{{isbn_baru}}\",\n    \"judul\": \"Arsitektur Berorientasi Layanan\",\n    \"penulis\": \"Silvia Sitorus\",\n    \"penerbit\": \"Informatika Bandung\",\n    \"tahun_terbit\": 2025,\n    \"kategori_id\": 2,\n    \"stok\": 3,\n    \"sinopsis\": \"Membahas SOAP, REST, dan microservices untuk sistem informasi kampus.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// ISBN-13 acak agar collection bisa dijalankan berulang kali",
+                  "let isbn = \"978\";",
+                  "for (let i = 0; i < 10; i++) isbn += Math.floor(Math.random() * 10);",
+                  "pm.collectionVariables.set(\"isbn_baru\", isbn);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    pm.test(\"Header Location menuju resource baru\", () => pm.expect(pm.response.headers.get(\"Location\")).to.include(\"/api/v1/bukus/\" + json.data.id));",
+                  "    pm.test(\"HATEOAS: pinjam_buku muncul (stok > 0)\", () => pm.expect(json.data._links).to.have.property(\"pinjam_buku\"));",
+                  "    pm.collectionVariables.set(\"buku_baru_id\", json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST buku - ISBN duplikat (422)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bukus",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bukus"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"isbn\": \"{{isbn_baru}}\",\n    \"judul\": \"Arsitektur Berorientasi Layanan\",\n    \"penulis\": \"Silvia Sitorus\",\n    \"penerbit\": \"Informatika Bandung\",\n    \"tahun_terbit\": 2025,\n    \"kategori_id\": 2,\n    \"stok\": 3,\n    \"sinopsis\": \"Membahas SOAP, REST, dan microservices untuk sistem informasi kampus.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Format RFC 7807 (application/problem+json)\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const j = pm.response.json();",
+                  "    [\"type\", \"title\", \"status\", \"detail\", \"instance\"].forEach(k => pm.expect(j).to.have.property(k));",
+                  "});",
+                  "pm.test(\"errors.isbn muncul\", () => pm.expect(pm.response.json().errors).to.have.property(\"isbn\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET detail buku baru (200)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bukus/{{buku_baru_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bukus",
+                "{{buku_baru_id}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH buku - hanya stok (200)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bukus/{{buku_baru_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bukus",
+                "{{buku_baru_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"stok\": 8\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test(\"Stok berubah menjadi 8\", () => pm.expect(json.data.stok).to.eql(8));",
+                  "pm.test(\"PATCH: sinopsis TETAP ada\", () => pm.expect(json.data.sinopsis).to.not.be.null);",
+                  "pm.test(\"meta.updated_fields = [stok]\", () => pm.expect(json.meta.updated_fields).to.eql([\"stok\"]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH buku - body kosong (400)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bukus/{{buku_baru_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bukus",
+                "{{buku_baru_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Format RFC 7807 (application/problem+json)\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const j = pm.response.json();",
+                  "    [\"type\", \"title\", \"status\", \"detail\", \"instance\"].forEach(k => pm.expect(j).to.have.property(k));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT buku - tanpa sinopsis (200)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bukus/{{buku_baru_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bukus",
+                "{{buku_baru_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"isbn\": \"{{isbn_baru}}\",\n    \"judul\": \"Arsitektur Berorientasi Layanan (Edisi Revisi)\",\n    \"penulis\": \"Silvia Sitorus\",\n    \"penerbit\": \"Informatika Bandung\",\n    \"tahun_terbit\": 2026,\n    \"kategori_id\": 2,\n    \"stok\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test(\"Judul terganti\", () => pm.expect(json.data.judul).to.include(\"Edisi Revisi\"));",
+                  "pm.test(\"PUT: sinopsis di-reset menjadi null\", () => pm.expect(json.data.sinopsis).to.be.null);"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Bukti perbedaan **PATCH** (sinopsis tetap) vs **PUT** (sinopsis menjadi null) pada buku yang sama."
+    },
+    {
+      "name": "04. Peminjaman ACID (Token)",
+      "item": [
+        {
+          "name": "GET peminjaman - tanpa token (401)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/peminjamans",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "peminjamans"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Format RFC 7807 (application/problem+json)\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const j = pm.response.json();",
+                  "    [\"type\", \"title\", \"status\", \"detail\", \"instance\"].forEach(k => pm.expect(j).to.have.property(k));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET peminjaman aktif (200)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/peminjamans?status=dipinjam&per_page=5",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "peminjamans"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "dipinjam"
+                },
+                {
+                  "key": "per_page",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Semua berstatus dipinjam & punya kembalikan_buku\", () => pm.response.json().data.forEach(p => {",
+                  "    pm.expect(p.status).to.eql(\"dipinjam\");",
+                  "    pm.expect(p._links).to.have.property(\"kembalikan_buku\");",
+                  "}));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST pinjam - sukses (201 + Location)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/peminjamans",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "peminjamans"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"buku_id\": \"{{buku_baru_id}}\",\n    \"nim_peminjam\": \"12S24099\",\n    \"nama_peminjam\": \"Mahasiswa Uji API\",\n    \"durasi_hari\": 7\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    pm.test(\"Header Location\", () => pm.expect(pm.response.headers.get(\"Location\")).to.include(\"/api/v1/peminjamans/\" + json.data.id));",
+                  "    pm.test(\"Status dipinjam & link kembalikan_buku muncul\", () => {",
+                  "        pm.expect(json.data.status).to.eql(\"dipinjam\");",
+                  "        pm.expect(json.data._links).to.have.property(\"kembalikan_buku\");",
+                  "    });",
+                  "    pm.collectionVariables.set(\"peminjaman_id\", json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST pinjam - NIM sama masih meminjam (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/peminjamans",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "peminjamans"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"buku_id\": \"{{buku_baru_id}}\",\n    \"nim_peminjam\": \"12S24099\",\n    \"nama_peminjam\": \"Mahasiswa Uji API\",\n    \"durasi_hari\": 7\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Format RFC 7807 (application/problem+json)\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const j = pm.response.json();",
+                  "    [\"type\", \"title\", \"status\", \"detail\", \"instance\"].forEach(k => pm.expect(j).to.have.property(k));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST pinjam - stok habis (422)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/peminjamans",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "peminjamans"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"buku_id\": \"{{buku_habis_id}}\",\n    \"nim_peminjam\": \"12S24099\",\n    \"nama_peminjam\": \"Mahasiswa Uji API\",\n    \"durasi_hari\": 7\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Format RFC 7807 (application/problem+json)\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const j = pm.response.json();",
+                  "    [\"type\", \"title\", \"status\", \"detail\", \"instance\"].forEach(k => pm.expect(j).to.have.property(k));",
+                  "});",
+                  "pm.test(\"Pesan stok habis\", () => pm.expect(pm.response.json().detail).to.include(\"Stok buku sedang habis\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST pinjam - buku tidak ada (404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/peminjamans",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "peminjamans"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"buku_id\": 999999,\n    \"nim_peminjam\": \"12S24099\",\n    \"nama_peminjam\": \"Mahasiswa Uji API\",\n    \"durasi_hari\": 7\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Format RFC 7807 (application/problem+json)\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const j = pm.response.json();",
+                  "    [\"type\", \"title\", \"status\", \"detail\", \"instance\"].forEach(k => pm.expect(j).to.have.property(k));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST pinjam - body kosong (422)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/peminjamans",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "peminjamans"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Format RFC 7807 (application/problem+json)\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const j = pm.response.json();",
+                  "    [\"type\", \"title\", \"status\", \"detail\", \"instance\"].forEach(k => pm.expect(j).to.have.property(k));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cek stok tidak bocor (harus 4)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bukus/{{buku_baru_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bukus",
+                "{{buku_baru_id}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Setelah PUT stok = 5. Satu peminjaman sukses dan tiga peminjaman ditolak (409/422/404) harus menghasilkan stok 4."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json().data;",
+                  "pm.test(\"Stok berkurang tepat 1 (PUT set 5, dipinjam 1 -> 4)\", () => pm.expect(b.stok).to.eql(4));",
+                  "pm.test(\"peminjaman_aktif = 1\", () => pm.expect(b.peminjaman_aktif).to.eql(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE buku yang sedang dipinjam (409)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bukus/{{buku_baru_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bukus",
+                "{{buku_baru_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Format RFC 7807 (application/problem+json)\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const j = pm.response.json();",
+                  "    [\"type\", \"title\", \"status\", \"detail\", \"instance\"].forEach(k => pm.expect(j).to.have.property(k));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH kembalikan - sukses (200)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/peminjamans/{{peminjaman_id}}/kembalikan",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "peminjamans",
+                "{{peminjaman_id}}",
+                "kembalikan"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const p = pm.response.json().data;",
+                  "pm.test(\"Status dikembalikan & tanggal_kembali terisi\", () => {",
+                  "    pm.expect(p.status).to.eql(\"dikembalikan\");",
+                  "    pm.expect(p.tanggal_kembali).to.not.be.null;",
+                  "});",
+                  "pm.test(\"HATEOAS: kembalikan_buku HILANG\", () => pm.expect(p._links).to.not.have.property(\"kembalikan_buku\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH kembalikan - sudah dikembalikan (409)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/peminjamans/{{peminjaman_id}}/kembalikan",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "peminjamans",
+                "{{peminjaman_id}}",
+                "kembalikan"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Format RFC 7807 (application/problem+json)\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const j = pm.response.json();",
+                  "    [\"type\", \"title\", \"status\", \"detail\", \"instance\"].forEach(k => pm.expect(j).to.have.property(k));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cek stok kembali (5)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bukus/{{buku_baru_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bukus",
+                "{{buku_baru_id}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Stok kembali 5\", () => pm.expect(pm.response.json().data.stok).to.eql(5));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET detail peminjaman (200)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/peminjamans/{{peminjaman_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "peminjamans",
+                "{{peminjaman_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Transaksi dibungkus `DB::transaction()` + `lockForUpdate()`. Request penolakan (409/422/404) tidak mengubah stok."
+    },
+    {
+      "name": "05. Hapus Buku (Token)",
+      "item": [
+        {
+          "name": "DELETE buku - sukses (204)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bukus/{{buku_baru_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bukus",
+                "{{buku_baru_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204\", () => pm.response.to.have.status(204));",
+                  "pm.test(\"Body kosong\", () => pm.expect(pm.response.text()).to.eql(\"\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET buku yang sudah dihapus (404)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bukus/{{buku_baru_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bukus",
+                "{{buku_baru_id}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Format RFC 7807 (application/problem+json)\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const j = pm.response.json();",
+                  "    [\"type\", \"title\", \"status\", \"detail\", \"instance\"].forEach(k => pm.expect(j).to.have.property(k));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06. Referensi Eksternal OpenLibrary (REST Consumer)",
+      "item": [
+        {
+          "name": "Referensi Clean Code - sukses (200)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bukus/{{buku_isbn_nyata_id}}/referensi-eksternal",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bukus",
+                "{{buku_isbn_nyata_id}}",
+                "referensi-eksternal"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Jika OpenLibrary sedang lambat, API menjawab 504 (Gateway Timeout) secara jujur. Kirim ulang beberapa saat lagi untuk mendapatkan 200."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 (sukses) atau 502/504 jika OpenLibrary sedang lambat/tidak dapat dihubungi\", () => pm.expect(pm.response.code).to.be.oneOf([200, 502, 504]));",
+                  "if (pm.response.code === 200) {",
+                  "    const r = pm.response.json().data.referensi_eksternal;",
+                  "    pm.test(\"Ringkasan berisi judul, penerbit, halaman, tanggal, url\", () => [\"judul\", \"penerbit\", \"jumlah_halaman\", \"tanggal_terbit\", \"url\"].forEach(k => pm.expect(r).to.have.property(k)));",
+                  "} else {",
+                  "    pm.test(\"Galat upstream tetap berformat RFC 7807\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\"));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Referensi ISBN fiktif (404 / 504)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bukus/1/referensi-eksternal?refresh=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bukus",
+                "1",
+                "referensi-eksternal"
+              ],
+              "query": [
+                {
+                  "key": "refresh",
+                  "value": "1"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "OpenLibrary bisa lambat untuk ISBN yang tidak dikenal. Jika melebihi OPENLIBRARY_TIMEOUT, API menjawab 504."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404 (tidak terdaftar) atau 504 (OpenLibrary lambat)\", () => pm.expect(pm.response.code).to.be.oneOf([404, 504]));",
+                  "pm.test(\"Format RFC 7807 (application/problem+json)\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const j = pm.response.json();",
+                  "    [\"type\", \"title\", \"status\", \"detail\", \"instance\"].forEach(k => pm.expect(j).to.have.property(k));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Referensi buku tidak ada (404)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bukus/999999/referensi-eksternal",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bukus",
+                "999999",
+                "referensi-eksternal"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Format RFC 7807 (application/problem+json)\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const j = pm.response.json();",
+                  "    [\"type\", \"title\", \"status\", \"detail\", \"instance\"].forEach(k => pm.expect(j).to.have.property(k));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07. Logout & Revocation (Token)",
+      "item": [
+        {
+          "name": "Logout - cabut token (200)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Me - token yang sudah dicabut (401)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Format RFC 7807 (application/problem+json)\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                  "    const j = pm.response.json();",
+                  "    [\"type\", \"title\", \"status\", \"detail\", \"instance\"].forEach(k => pm.expect(j).to.have.property(k));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08. Latihan GitHub REST API (Lab 2)",
+      "item": [
+        {
+          "name": "GET user publik (200)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/vnd.github+json"
+              },
+              {
+                "key": "X-GitHub-Api-Version",
+                "value": "2022-11-28"
+              }
+            ],
+            "url": {
+              "raw": "https://api.github.com/users/{{github_username}}",
+              "protocol": "https",
+              "host": [
+                "api",
+                "github",
+                "com"
+              ],
+              "path": [
+                "users",
+                "{{github_username}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET repos terbaru (200)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/vnd.github+json"
+              },
+              {
+                "key": "X-GitHub-Api-Version",
+                "value": "2022-11-28"
+              }
+            ],
+            "url": {
+              "raw": "https://api.github.com/users/{{github_username}}/repos?sort=updated&direction=desc&per_page=3",
+              "protocol": "https",
+              "host": [
+                "api",
+                "github",
+                "com"
+              ],
+              "path": [
+                "users",
+                "{{github_username}}",
+                "repos"
+              ],
+              "query": [
+                {
+                  "key": "sort",
+                  "value": "updated"
+                },
+                {
+                  "key": "direction",
+                  "value": "desc"
+                },
+                {
+                  "key": "per_page",
+                  "value": "3"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /user - ubah bio (200)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/vnd.github+json"
+              },
+              {
+                "key": "X-GitHub-Api-Version",
+                "value": "2022-11-28"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "https://api.github.com/user",
+              "protocol": "https",
+              "host": [
+                "api",
+                "github",
+                "com"
+              ],
+              "path": [
+                "user"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"bio\": \"Mahasiswa S1 Sistem Informasi IT Del — Praktikum REST API Minggu 9\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{github_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Isi variabel `github_token` hanya pada kolom **Current Value**. Sensor token saat mengambil screenshot dan hapus token setelah praktikum."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /user - token salah (401)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/vnd.github+json"
+              },
+              {
+                "key": "X-GitHub-Api-Version",
+                "value": "2022-11-28"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "https://api.github.com/user",
+              "protocol": "https",
+              "host": [
+                "api",
+                "github",
+                "com"
+              ],
+              "path": [
+                "user"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"bio\": \"uji token salah\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "ghp_tokenTidakValid",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Latihan konsumsi REST API publik GitHub. Token TIDAK disimpan di file ini."
+    }
+  ],
+  "variable": [
+    {
+      "key": "host",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "base_url",
+      "value": "{{host}}/api/v1"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "nim_soap",
+      "value": "12S24004"
+    },
+    {
+      "key": "buku_habis_id",
+      "value": "2"
+    },
+    {
+      "key": "buku_isbn_nyata_id",
+      "value": "31"
+    },
+    {
+      "key": "isbn_baru",
+      "value": ""
+    },
+    {
+      "key": "buku_baru_id",
+      "value": ""
+    },
+    {
+      "key": "peminjaman_id",
+      "value": ""
+    },
+    {
+      "key": "github_username",
+      "value": "octocat"
+    },
+    {
+      "key": "github_token",
+      "value": ""
+    }
+  ]
+}
