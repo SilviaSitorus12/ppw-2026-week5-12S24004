@@ -10,8 +10,8 @@ simulasi ringkas layanan **SOAP** legacy, serta implementasi **RESTful Web API v
 |---|---|
 | Nama Lengkap | Silvia Eklesiana Sitorus |
 | NIM | 12S24004 |
-| Kelas | [ISI KELAS] |
-| Program Studi | [ISI PROGRAM STUDI] |
+| Kelas | 13 SI 1 |
+| Program Studi | Sistem Informasi |
 | Mata Kuliah | Pemrograman dan Pengujian Aplikasi Web (12S3101) |
 | Dosen Pengampu | Chandro Pardede, S.Kom., M.Sc. |
 | Branch | `week9-rest-api` |
